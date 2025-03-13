@@ -12,10 +12,16 @@ const PORT = process.env.PORT || 5000;
 
 // ✅ Enable CORS for frontend
 const corsOptions = {
-  origin: ["http://localhost:5176", "https://your-vercel-app-url.vercel.app"], // Add your Vercel frontend URL
+  origin: ["http://localhost:5176", "round-robin-frontend.vercel.app"], 
   credentials: true,
   optionsSuccessStatus: 200,
 };
+// const corsOptions = {
+//   origin: "http://localhost:5176", // Remove the Vercel URL to allow only localhost
+//   credentials: true,
+//   optionsSuccessStatus: 200,
+// };
+
 
 app.use(cors(corsOptions));
 
