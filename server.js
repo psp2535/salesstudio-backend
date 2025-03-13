@@ -10,18 +10,20 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5176";
+const FRONTEND_URL = "http://localhost:5173"; // ✅ Local frontend URL
 
-// ✅ Enable CORS for frontend
+// ✅ CORS Configuration for Localhost
 const corsOptions = {
-  origin: [FRONTEND_URL, "https://round-robin-frontend.vercel.app"],
-  credentials: true,
+  origin: "http://localhost:5173", // ✅ Allow frontend requests
+  credentials: true, 
   methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 200,
+  allowedHeaders: ["Content-Type", "Authorization"]
 };
+app.use(cors(corsOptions));
 
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // ✅ Handle preflight requests
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -107,8 +109,8 @@ app.post("/api/claim", async (req, res) => {
     res.cookie("claimed", hashedIp, {
       maxAge: COOLDOWN_TIME,
       httpOnly: true,
-      secure: true, // ✅ Required for HTTPS
-      sameSite: "none", // ✅ Required for cross-origin cookies
+      secure: false, // ❌ No HTTPS required for local development
+      sameSite: "lax",
     });
 
     res.json({
@@ -144,4 +146,4 @@ app.get("/api/cooldown", async (req, res) => {
 });
 
 // ✅ Start Server
-app.listen(PORT, () => console.log(`✅ Server running on port: ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running locally on http://localhost:${PORT}`));
