@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const cors = require("cors"); // ✅ Keep only this
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
@@ -10,24 +10,18 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5176";
+
 // ✅ Enable CORS for frontend
 const corsOptions = {
-  origin: ["http://localhost:5176", "https://round-robin-frontend.vercel.app"],
+  origin: [FRONTEND_URL, "https://round-robin-frontend.vercel.app"],
   credentials: true,
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 200,
 };
 
-// const corsOptions = {
-//   origin: "http://localhost:5176", // Remove the Vercel URL to allow only localhost
-//   credentials: true,
-//   optionsSuccessStatus: 200,
-// };
-
-
 app.use(cors(corsOptions));
-
 app.use(express.json());
 app.use(cookieParser());
 
@@ -35,7 +29,7 @@ app.use(cookieParser());
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
 app.use(limiter);
 
-const COOLDOWN_TIME = 60* 60 * 1000; // 1 hour
+const COOLDOWN_TIME = 60 * 60 * 1000; // 1 hour
 
 // ✅ Hash IP for privacy
 function hashIP(ip) {
@@ -44,9 +38,13 @@ function hashIP(ip) {
 
 // ✅ Initialize Counter
 async function initializeCounter() {
-  const counter = await prisma.counter.findFirst();
-  if (!counter) {
-    await prisma.counter.create({ data: { value: 0 } });
+  try {
+    const counter = await prisma.counter.findFirst();
+    if (!counter) {
+      await prisma.counter.create({ data: { value: 0 } });
+    }
+  } catch (error) {
+    console.error("❌ Error initializing counter:", error);
   }
 }
 initializeCounter();
@@ -67,19 +65,23 @@ app.post("/api/claim", async (req, res) => {
     });
 
     if (recentClaim && new Date() - recentClaim.claimedAt < COOLDOWN_TIME) {
-      return res.status(429).json({ message: "Please wait before claiming another coupon." });
+      return res.status(429).json({ message: "⏳ Please wait before claiming another coupon." });
     }
 
     // ✅ Check if Coupons Exist
     const totalCoupons = await prisma.coupon.count();
     if (totalCoupons === 0) {
       console.log("❌ No coupons available.");
-      return res.status(404).json({ message: "No coupons available." });
+      return res.status(404).json({ message: "🚫 No coupons available." });
     }
 
     // ✅ Get the next available coupon using Round-Robin
-    const counter = await prisma.counter.findFirst();
-    let currentIndex = counter ? counter.value : 0;
+    let counter = await prisma.counter.findFirst();
+    if (!counter) {
+      counter = await prisma.counter.create({ data: { value: 0 } });
+    }
+
+    let currentIndex = counter.value;
 
     const coupon = await prisma.coupon.findFirst({
       orderBy: { id: "asc" },
@@ -88,7 +90,7 @@ app.post("/api/claim", async (req, res) => {
 
     if (!coupon) {
       console.log("❌ No available coupon found.");
-      return res.status(404).json({ message: "No coupons available." });
+      return res.status(404).json({ message: "🚫 No available coupons." });
     }
 
     // ✅ Store claim in history
@@ -102,12 +104,22 @@ app.post("/api/claim", async (req, res) => {
       data: { value: (currentIndex + 1) % totalCoupons },
     });
 
-    res.cookie("claimed", hashedIp, { maxAge: COOLDOWN_TIME });
-    res.json({ coupon: coupon.code, message: "Coupon claimed successfully!", timeRemaining: COOLDOWN_TIME / 60000 });
+    res.cookie("claimed", hashedIp, {
+      maxAge: COOLDOWN_TIME,
+      httpOnly: true,
+      secure: true, // ✅ Required for HTTPS
+      sameSite: "none", // ✅ Required for cross-origin cookies
+    });
+
+    res.json({
+      coupon: coupon.code,
+      message: "🎉 Coupon claimed successfully!",
+      timeRemaining: COOLDOWN_TIME / 60000,
+    });
 
   } catch (error) {
     console.error("❌ Error claiming coupon:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: "⚠️ Internal Server Error" });
   }
 });
 
@@ -132,4 +144,4 @@ app.get("/api/cooldown", async (req, res) => {
 });
 
 // ✅ Start Server
-app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port: ${PORT}`));
