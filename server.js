@@ -12,10 +12,11 @@ const PORT = process.env.PORT || 5000;
 
 // ✅ Enable CORS for frontend
 const corsOptions = {
-  origin: "http://localhost:5175", // Adjust frontend URL if needed
-  credentials: true, // Allow cookies
+  origin: ["http://localhost:5176", "https://your-vercel-app-url.vercel.app"], // Add your Vercel frontend URL
+  credentials: true,
   optionsSuccessStatus: 200,
 };
+
 app.use(cors(corsOptions));
 
 app.use(express.json());
