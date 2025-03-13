@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Coupon {
+  id           Int            @id @default(autoincrement())
+  code         String         @unique
+  ClaimHistory ClaimHistory[]
+}
+
+model ClaimHistory {
+  id        Int      @id @default(autoincrement())
+  couponId  Int
+  claimedBy String
+  claimedAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+}
+
+model Counter {
+  id    Int @id @default(1)
+  value Int
+}
