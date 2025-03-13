@@ -10,15 +10,18 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const FRONTEND_URL = "http://localhost:5173"; // ✅ Local frontend URL
+const FRONTEND_URL = "https://salesstudio-frontend.vercel.app"; // ✅ Deployed frontend URL
 
-// ✅ CORS Configuration for Localhost
+// ✅ CORS Configuration
 const corsOptions = {
-  origin: "http://localhost:5173", // ✅ Allow frontend requests
-  credentials: true, 
+  origin: FRONTEND_URL, // ✅ Allow requests from deployed frontend
+  credentials: true,
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization"]
 };
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // ✅ Handle preflight requests
+
 app.use(cors(corsOptions));
 
 app.use(cors(corsOptions));
